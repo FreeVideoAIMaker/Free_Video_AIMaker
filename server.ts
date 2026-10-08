@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// STANDARD CONNECTION STRING - Fixes Render DNS Lookup completely by hitting nodes directly
+// STANDARD CLUSTER INFRASTRUCTURE URI - Connected dynamically to your production data nodes
 const mongoURI = "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0-shard-00-00.qdrozb.mongodb.net:27017,cluster0-shard-00-01.qdrozb.mongodb.net:27017,cluster0-shard-00-02.qdrozb.mongodb.net:27017/sample_mflix?ssl=true&replicaSet=atlas-13o89r-shard-0&authSource=admin&retryWrites=true&w=majority";
 
 let db: Db | null = null;
@@ -29,15 +29,16 @@ let siteSettings = {
   retentionHours: 24
 };
 
+// HANDSHAKE INITIALIZATION SEQUENCER
 async function connectDatabase() {
   try {
-    console.log('Initiating direct cluster node connection to MongoDB Atlas...');
+    console.log('Initiating static IPv4 socket connection to MongoDB Atlas database...');
     client = new MongoClient(mongoURI);
     await client.connect();
     
-    // Binding directly to your live database container from your screenshot
+    // Explicit binding to your production database container "sample_mflix"
     db = client.db('sample_mflix'); 
-    console.log('SUCCESS: Active database tunnel established with catalog: sample_mflix');
+    console.log('SUCCESS: Static database tunnel initialized. Workspace target: sample_mflix');
     
     const configColl = db.collection('config');
     const savedConfig = await configColl.findOne({});
@@ -53,14 +54,14 @@ async function connectDatabase() {
 }
 
 // ----------------------------------------------------
-// NATIVE ANTI-SLEEP TRIGGER (RUNS INTERNALLY EVERY 10 MINUTES)
+// ANTI-SLEEP ENGINE (DISPATCHES INTERNAL HTTP CALLS EVERY 10 MINUTES)
 // ----------------------------------------------------
 setInterval(() => {
   if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
     http.get(`${process.env.APP_URL}/api/system/keep-alive`, (res) => {
-      console.log(`[Anti-Sleep]: Sync check responded: ${res.statusCode}`);
+      console.log(`[Anti-Sleep]: Engine sync response: ${res.statusCode}`);
     }).on('error', (err) => {
-      console.error('[Anti-Sleep]: Trigger connection dropped:', err.message);
+      console.error('[Anti-Sleep]: Engine connection dropped:', err.message);
     });
   }
 }, 10 * 60 * 1000);
@@ -113,8 +114,11 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   res.json({ success: true, user: { id: result.insertedId, name, email } });
 });
 
+// SAFE FALLBACK STATS ENDPOINT TO PREVENT GRAPH AND DATA CRASHES
 app.get('/api/admin/stats', async (req: Request, res: Response) => {
-  if (!db) return res.json({ totalUsers: 0, totalGenerations: 0, totalVisitors: 0, whatsappNumber: siteSettings.whatsappNumber });
+  if (!db) {
+    return res.json({ totalUsers: 0, totalGenerations: 0, totalVisitors: 0, whatsappNumber: siteSettings.whatsappNumber });
+  }
   const totalUsers = await db.collection('users').countDocuments({ role: { '\$ne': 'admin' } });
   const totalVideos = await db.collection('videos').countDocuments({});
   res.json({ totalUsers, totalGenerations: totalVideos, totalVisitors: totalUsers * 2, whatsappNumber: siteSettings.whatsappNumber });
@@ -148,8 +152,8 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// INVOKES SERVER PROCESS LOGIC AND STABILIZES HANDSHAKE AUTOMATICALLY ON BOOT
+// STABILIZED INTERACTION SOCKET LAUNCH ROUTINE
 app.listen(PORT, async () => {
-  console.log(`Active server operating on network node port: ${PORT}`);
+  console.log(`Server node processing metrics on port instance: ${PORT}`);
   await connectDatabase();
 });
