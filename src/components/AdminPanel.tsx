@@ -323,14 +323,13 @@ export const AdminPanel: React.FC<{
 
         {/* TAB 6: MONGODB CONFIG MATRIX STATUS */}
         {activeTab === 'mongodb' && (
-          <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl space-y-4">
-            <h3 className="text-sm font-bold text-slate-200">MongoDB Atlas Cloud Database Integration Matrix</h3>
-            <div className={`p-4 rounded-xl border font-mono text-xs ${mongoStatus === 'connected' ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300' : 'bg-rose-950/40 border-rose-500/30 text-rose-300'}`}>
-              Pipeline Node Connection Cluster Status: {mongoStatus.toUpperCase()} successfully wired with multi-server cluster shards.
-            </div>
-          </div>
-        )}
-
+  <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl space-y-4 font-sans">
+    <h3 className="text-sm font-bold text-slate-200">MongoDB Atlas Cloud Database Integration Matrix</h3>
+    <div className={`p-4 rounded-xl border font-mono text-xs ${mongoStatus === 'connected' ? 'bg-emerald-950/40 border-emerald-500/30 text-emerald-300' : 'bg-rose-950/40 border-rose-500/30 text-rose-300'}`}>
+      Pipeline Node Connection Cluster Status: {mongoStatus === 'connected' ? 'CONNECTED successfully wired with multi-server cluster shards.' : 'DISCONNECTED - Verify IP Whitelist whitelist (0.0.0.0/0) on cloud console.'}
+    </div>
+  </div>
+)}
         {/* TAB 7: HF SECRET SEED KEY ROUTER */}
         {activeTab === 'settings' && (
           <div className="bg-slate-900/40 border border-slate-800 p-6 rounded-2xl space-y-4">
