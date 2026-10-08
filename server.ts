@@ -15,8 +15,8 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// رابط الاتصال المباشر والمستقر المخصص لحل مشاكل الـ DNS في Render
-const mongoURI = "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0-shard-00-00.qdrozb.mongodb.net:27017,cluster0-shard-00-01.qdrozb.mongodb.net:27017,cluster0-shard-00-02.qdrozb.mongodb.net:27017/sample_mflix?ssl=true&replicaSet=atlas-13o89r-shard-0&authSource=admin&retryWrites=true&w=majority";
+// تم الانتقال إلى رابط الـ SRV الأساسي والموحد لتخطي مشكلة حظر الـ Shards في رندر
+const mongoURI = "mongodb+srv://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0.qdrozb.mongodb.net/sample_mflix?retryWrites=true&w=majority";
 
 let db: Db | null = null;
 let client: MongoClient | null = null;
@@ -29,16 +29,17 @@ let siteSettings = {
   retentionHours: 24
 };
 
-// دالة الاتصال المحسنة لتجاوز قيود الحساب المجاني
+// دالة الاتصال المتقدمة المصممة خصيصاً لعبور جدار حماية Render
 async function connectDatabase() {
   try {
-    console.log('Initiating static IPv4 socket connection to MongoDB Atlas database...');
+    console.log('Initiating native SRV routing connection to MongoDB Atlas...');
     
-    // إعدادات لزيادة مهلة الانتظار ومنع سقوط السيرفر أثناء البناء
+    // الحل السحري: إجبار محرك node على استخدام مسار IPv4 المباشر وتمديد المهلة
     client = new MongoClient(mongoURI, {
-      connectTimeoutMS: 45000,
-      socketTimeoutMS: 45000,
-      serverSelectionTimeoutMS: 45000
+      family: 4, // يُجبر النظام على تخطي مشاكل فك تشفير IPv6 العاطلة في Render
+      connectTimeoutMS: 60000,
+      socketTimeoutMS: 60000,
+      serverSelectionTimeoutMS: 60000
     });
     
     await client.connect();
@@ -54,8 +55,20 @@ async function connectDatabase() {
       siteSettings = { ...siteSettings, ...savedConfig as any };
     }
   } catch (err: any) {
-    console.error('CRITICAL MONGO PIPELINE FAILURE:', err.message);
-    db = null;
+    console.error('FIRST PIPELINE ATTEMPT FAILED:', err.message);
+    
+    // محاولة إنقاذ أخيرة وبديلة بنظام خادم أحادي التوجيه في حال فشل الـ SRV
+    try {
+      console.log('Deploying Emergency Fallback Single-Node Stream...');
+      const emergencyURI = "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0-shard-00-00.qdrozb.mongodb.net:27017/sample_mflix?ssl=true&authSource=admin";
+      client = new MongoClient(emergencyURI, { family: 4 });
+      await client.connect();
+      db = client.db('sample_mflix');
+      console.log('EMERGENCY PIPELINE SUCCESS: Connected via backup routing!');
+    } catch (fallbackErr: any) {
+      console.error('CRITICAL MONGO PIPELINE FAILURE:', fallbackErr.message);
+      db = null;
+    }
   }
 }
 
@@ -157,7 +170,6 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// تشغيل السيرفر وبدء نفق الاتصال الآمن
 app.listen(PORT, async () => {
   console.log(`Server node processing metrics on port instance: ${PORT}`);
   await connectDatabase();
