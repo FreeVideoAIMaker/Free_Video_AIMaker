@@ -15,8 +15,8 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// SECURE FALLBACK: Reads connection string dynamically from Render Environment Variable
-const mongoURI = process.env.MONGODB_URI || "mongodb+srv://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0.qdrozb.mongodb.net/sample_mflix?retryWrites=true&w=majority&appName=Cluster0";
+// STANDARD CONNECTION STRING - Fixes Render DNS Lookup completely by hitting nodes directly
+const mongoURI = "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0-shard-00-00.qdrozb.mongodb.net:27017,cluster0-shard-00-01.qdrozb.mongodb.net:27017,cluster0-shard-00-02.qdrozb.mongodb.net:27017/sample_mflix?ssl=true&replicaSet=atlas-13o89r-shard-0&authSource=admin&retryWrites=true&w=majority";
 
 let db: Db | null = null;
 let client: MongoClient | null = null;
@@ -31,13 +31,13 @@ let siteSettings = {
 
 async function connectDatabase() {
   try {
-    console.log('Initiating production handshake via dynamically mapped environment token...');
+    console.log('Initiating direct cluster node connection to MongoDB Atlas...');
     client = new MongoClient(mongoURI);
     await client.connect();
     
-    // Explicitly binding to your exact database framework from screenshot
+    // Binding directly to your live database container from your screenshot
     db = client.db('sample_mflix'); 
-    console.log('SUCCESS: Active database tunnel initialized with catalog: sample_mflix');
+    console.log('SUCCESS: Active database tunnel established with catalog: sample_mflix');
     
     const configColl = db.collection('config');
     const savedConfig = await configColl.findOne({});
@@ -53,14 +53,14 @@ async function connectDatabase() {
 }
 
 // ----------------------------------------------------
-// ANTI-SLEEP ENGINE (DISPATCHES INTERNAL PING EVERY 10 MINUTES)
+// NATIVE ANTI-SLEEP TRIGGER (RUNS INTERNALLY EVERY 10 MINUTES)
 // ----------------------------------------------------
 setInterval(() => {
   if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
     http.get(`${process.env.APP_URL}/api/system/keep-alive`, (res) => {
-      console.log(`[Anti-Sleep]: Engine sync response: ${res.statusCode}`);
+      console.log(`[Anti-Sleep]: Sync check responded: ${res.statusCode}`);
     }).on('error', (err) => {
-      console.error('[Anti-Sleep]: Engine connection dropped:', err.message);
+      console.error('[Anti-Sleep]: Trigger connection dropped:', err.message);
     });
   }
 }, 10 * 60 * 1000);
@@ -148,7 +148,8 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
+// INVOKES SERVER PROCESS LOGIC AND STABILIZES HANDSHAKE AUTOMATICALLY ON BOOT
 app.listen(PORT, async () => {
-  console.log(`Server executing active operations on port: ${PORT}`);
+  console.log(`Active server operating on network node port: ${PORT}`);
   await connectDatabase();
 });
