@@ -15,8 +15,8 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// الحل النهائي: تجاوز الـ DNS تماماً والاتصال بالـ IP الرقمي المباشر لخادم الـ Atlas الخاص بك
-const mongoURI = "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@18.213.217.151:27017/sample_mflix?ssl=true&authSource=admin";
+// رابط الـ SRV الأصلي والمستقر الذي يعمل الآن بكفاءة وبدون أخطاء على شبكة Zeabur
+const mongoURI = "mongodb+srv://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0.qdrozb.mongodb.net/sample_mflix?retryWrites=true&w=majority";
 
 let db: Db | null = null;
 let client: MongoClient | null = null;
@@ -29,22 +29,16 @@ let siteSettings = {
   retentionHours: 24
 };
 
+// دالة الاتصال الطبيعية والمستقرة بقاعدة البيانات
 async function connectDatabase() {
   try {
-    console.log('Deploying Direct IPv4 Socket Tunnel to skip Render DNS restrictions...');
+    console.log('Initiating secure SRV routing connection to MongoDB Atlas...');
     
-    // إعداد الاتصال ليعمل مباشرة عبر البروتوكول الرقمي
-    client = new MongoClient(mongoURI, {
-      connectTimeoutMS: 60000,
-      socketTimeoutMS: 60000,
-      serverSelectionTimeoutMS: 60000,
-      tlsAllowInvalidCertificates: true // هامة جداً لتجاوز تدقيق اسم النطاق عند الاتصال بالـ IP المباشر
-    });
-    
+    client = new MongoClient(mongoURI);
     await client.connect();
     
     db = client.db('sample_mflix'); 
-    console.log('SUCCESS: Static database tunnel initialized. Workspace target: sample_mflix');
+    console.log('SUCCESS: Database tunnel initialized. Workspace target: sample_mflix');
     
     const configColl = db.collection('config');
     const savedConfig = await configColl.findOne({});
