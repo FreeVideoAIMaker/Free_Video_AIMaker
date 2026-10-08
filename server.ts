@@ -10,12 +10,14 @@ dotenv.config();
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const app = express();
-const PORT = process.env.PORT || 10000;
+
+// إعداد منفذ تشغيل متوافق ديناميكياً مع السيرفر الجديد
+const PORT = process.env.PORT || 8080;
 
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// رابط الـ SRV الأصلي والمستقر الذي يعمل الآن بكفاءة وبدون أخطاء على شبكة Zeabur
+// رابط الـ SRV الطبيعي المستقر
 const mongoURI = "mongodb+srv://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0.qdrozb.mongodb.net/sample_mflix?retryWrites=true&w=majority";
 
 let db: Db | null = null;
@@ -29,7 +31,7 @@ let siteSettings = {
   retentionHours: 24
 };
 
-// دالة الاتصال الطبيعية والمستقرة بقاعدة البيانات
+// دالة الاتصال المباشرة والسريعة
 async function connectDatabase() {
   try {
     console.log('Initiating secure SRV routing connection to MongoDB Atlas...');
@@ -54,7 +56,7 @@ async function connectDatabase() {
 }
 
 // ----------------------------------------------------
-// ANTI-SLEEP ENGINE (DISPATCHES INTERNAL HTTP CALLS EVERY 10 MINUTES)
+// ANTI-SLEEP ENGINE (إبقاء السيرفر مستيقظاً 24/7 دون خمول)
 // ----------------------------------------------------
 setInterval(() => {
   if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
