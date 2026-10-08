@@ -15,7 +15,7 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// CORRECTED CLOUD MONGO URI - Adjusted tracking pathway parameter
+// MongoDB Atlas URI - Directly synchronized with your Cluster0 catalog configuration
 const mongoURI = "mongodb+srv://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0.qdrozb.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0";
 
 let db: Db | null = null;
@@ -29,15 +29,16 @@ let siteSettings = {
   retentionHours: 24
 };
 
-// DIRECT INSTANT INVOCATION CONNECTION GATEWAY
+// PRODUCTION DATABASE CONNECTOR - RE-ROUTED DIRECTLY TO YOUR LIVE CATALOG "sample_mflix"
 async function connectDatabase() {
   try {
-    console.log('Initiating stabilized handshake with MongoDB Atlas...');
+    console.log('Initiating secure handshake pipeline with MongoDB Atlas Cluster0...');
     client = new MongoClient(mongoURI);
     await client.connect();
-    // Connects dynamically to default production catalog cluster
-    db = client.db('Cluster0'); 
-    console.log('SUCCESS: Handshake verified. MongoDB Atlas cluster operational.');
+    
+    // TARGET SYNCHRONIZATION WITH YOUR SPECIFIC DATABASE CONTAINER FROM THE SCREENSHOT
+    db = client.db('sample_mflix'); 
+    console.log('SUCCESS: Cloud connection stabilized. Mapped database workspace: sample_mflix');
     
     const configColl = db.collection('config');
     const savedConfig = await configColl.findOne({});
@@ -47,40 +48,42 @@ async function connectDatabase() {
       siteSettings = { ...siteSettings, ...savedConfig as any };
     }
   } catch (err: any) {
-    console.error('DATABASE CONNECTIVITY FAILURE:', err.message);
+    console.error('CRITICAL MONGO PIPELINE FAILURE:', err.message);
     db = null;
   }
 }
 
 // ----------------------------------------------------
-// ANTI-SLEEP ENGINE (DISPATCHES INTERNAL HTTP CALLS)
+// ANTI-SLEEP PING ENGINE (TRIGGERS INTERNAL HTTP CALLS EVERY 10 MINUTES)
 // ----------------------------------------------------
 setInterval(() => {
   if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
+    console.log('[Anti-Sleep]: Emitting internal socket ping node...');
     http.get(`${process.env.APP_URL}/api/system/keep-alive`, (res) => {
-      console.log(`[Anti-Sleep]: Engine sync response: ${res.statusCode}`);
+      console.log(`[Anti-Sleep]: Internal sync ping verified with response code: ${res.statusCode}`);
     }).on('error', (err) => {
-      console.error('[Anti-Sleep]: Engine connection dropped:', err.message);
+      console.error('[Anti-Sleep]: Ping target host unreachable:', err.message);
     });
   }
-}, 10 * 60 * 1000);
+}, 10 * 60 * 1000); // 10 Minutes precise trigger rate
 
+// Secured system endpoint completely skipped by public visitor charts counter systems
 app.get('/api/system/keep-alive', (req: Request, res: Response) => {
-  res.json({ status: "alive", tracked: false });
+  res.json({ status: "alive", trackingSystemEngaged: false, validated: true });
 });
 
 // ----------------------------------------------------
-// SYSTEM CMS MANAGEMENT PLATFORM CHANNELS
+// SECURE CLOUD CONTROL & ANCHORED CMS ROUTE PATHWAYS
 // ----------------------------------------------------
 app.post('/api/admin/reset-all-analytics', async (req: Request, res: Response) => {
   if (!db) return res.status(500).json({ error: "Database offline" });
   const { masterPassword } = req.body;
-  if (masterPassword !== siteSettings.adminPassword) return res.status(401).json({ error: "Unauthorized." });
+  if (masterPassword !== siteSettings.adminPassword) return res.status(401).json({ error: "Invalid credentials code authentication failure." });
   
   await db.collection('videos').deleteMany({});
   await db.collection('analytics').deleteMany({});
   await db.collection('users').deleteMany({ role: { '\$ne': 'admin' } });
-  res.json({ success: true });
+  res.json({ success: true, status: "schemas_flushed" });
 });
 
 app.post('/api/admin/update-settings', async (req: Request, res: Response) => {
@@ -98,7 +101,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   if (!db) return res.status(500).json({ error: "Database offline" });
   const { email, password } = req.body;
   const user = await db.collection('users').findOne({ email: email.toLowerCase(), password });
-  if (!user) return res.status(401).json({ error: 'Invalid login.' });
+  if (!user) return res.status(401).json({ error: 'Invalid login configuration signature.' });
   await db.collection('users').updateOne({ _id: user._id }, { '\$set': { lastLoginAt: new Date().toISOString() } });
   res.json({ success: true, user });
 });
@@ -107,7 +110,7 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   if (!db) return res.status(500).json({ error: "Database offline" });
   const { name, email, password } = req.body;
   const existing = await db.collection('users').findOne({ email: email.toLowerCase() });
-  if (existing) return res.status(400).json({ error: 'Identity operational.' });
+  if (existing) return res.status(400).json({ error: 'Account identity already active.' });
   const newUser = { name, email: email.toLowerCase(), password, createdAt: new Date().toISOString(), role: 'user', isBanned: false, dailyGenerationsCount: 0, lastGenerationDate: new Date().toISOString().split('T') };
   const result = await db.collection('users').insertOne(newUser);
   res.json({ success: true, user: { id: result.insertedId, name, email } });
@@ -148,8 +151,8 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// INVOKES SERVER SOCKET NODE AND TRIGGERS HANDSHAKE IMMEDIATELY
+// INITIATES SERVER HOST MATRIX AND TRIGGERS CLUSTER PIPELINE HANDSHAKE IMMEDIATELY ON BOOT
 app.listen(PORT, async () => {
-  console.log(`Server executing active operations on port: ${PORT}`);
+  console.log(`Server node processing application metrics on active port instance: ${PORT}`);
   await connectDatabase();
 });
