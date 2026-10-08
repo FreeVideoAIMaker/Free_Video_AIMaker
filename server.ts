@@ -80,7 +80,7 @@ app.post('/api/admin/reset-all-analytics', async (req: Request, res: Response) =
 
   await db.collection('videos').deleteMany({});
   await db.collection('analytics').deleteMany({});
-  await db.collection('users').deleteMany({ role: { \$ne: 'admin' } });
+  await db.collection('users').deleteMany({ role: { '\$ne': 'admin' } });
   
   res.json({ success: true, message: "Cloud statistics reset completely." });
 });
@@ -90,11 +90,21 @@ app.post('/api/admin/update-settings', async (req: Request, res: Response) => {
   if (!db) return res.status(500).json({ error: "Database offline" });
   const { newPassword, whatsappNumber, dailyLimit } = req.body;
 
-  if (newPassword && newPassword.trim().length >= 4) siteSettings.adminPassword = newPassword.trim();
-  if (whatsappNumber !== undefined) siteSettings.whatsappNumber = whatsappNumber.trim();
-  if (dailyLimit !== undefined) siteSettings.dailyLimitPerUser = Number(dailyLimit);
+  const updateFields: any = {};
+  if (newPassword && newPassword.trim().length >= 4) {
+    siteSettings.adminPassword = newPassword.trim();
+    updateFields.adminPassword = siteSettings.adminPassword;
+  }
+  if (whatsappNumber !== undefined) {
+    siteSettings.whatsappNumber = whatsappNumber.trim();
+    updateFields.whatsappNumber = siteSettings.whatsappNumber;
+  }
+  if (dailyLimit !== undefined) {
+    siteSettings.dailyLimitPerUser = Number(dailyLimit);
+    updateFields.dailyLimitPerUser = siteSettings.dailyLimitPerUser;
+  }
 
-  await db.collection('config').updateOne({}, { \$set: siteSettings }, { upsert: true });
+  await db.collection('config').updateOne({}, { '\$set': updateFields }, { upsert: true });
   res.json({ success: true, settings: siteSettings });
 });
 
@@ -104,7 +114,7 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   const user = await db.collection('users').findOne({ email: email.toLowerCase(), password });
   if (!user) return res.status(401).json({ error: 'Invalid login matrix.' });
   
-  await db.collection('users').updateOne({ _id: user._id }, { \$set: { lastLoginAt: new Date().toISOString() } });
+  await db.collection('users').updateOne({ _id: user._id }, { '\$set': { lastLoginAt: new Date().toISOString() } });
   res.json({ success: true, user });
 });
 
