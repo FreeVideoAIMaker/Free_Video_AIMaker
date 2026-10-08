@@ -1,0 +1,6 @@
+{
+  "name": "FreeVideoAIMaker",
+  "description": "Free AI Video Generator from images and prompts. Create cinematic AI videos with multi-image keyframes, dynamic camera motion, and customizable visual styles.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}
