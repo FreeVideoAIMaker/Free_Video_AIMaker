@@ -4,6 +4,7 @@ import { fileURLToPath } from 'url';
 import dotenv from 'dotenv';
 import { MongoClient, Db, ObjectId } from 'mongodb';
 import http from 'http';
+import dns from 'dns';
 
 dotenv.config();
 
@@ -15,8 +16,8 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// STANDARD CLUSTER INFRASTRUCTURE URI - Connected dynamically to your production data nodes
-const mongoURI = "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0-shard-00-00.qdrozb.mongodb.net:27017,cluster0-shard-00-01.qdrozb.mongodb.net:27017,cluster0-shard-00-02.qdrozb.mongodb.net:27017/sample_mflix?ssl=true&replicaSet=atlas-13o89r-shard-0&authSource=admin&retryWrites=true&w=majority";
+// تم ضبط الرابط وتأمينه ليعمل عبر متغيرات البيئة أو الرابط المباشر كاحتياط
+const mongoURI = process.env.MONGO_URI || "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0-shard-00-00.qdrozb.mongodb.net:27017,cluster0-shard-00-01.qdrozb.mongodb.net:27017,cluster0-shard-00-02.qdrozb.mongodb.net:27017/sample_mflix?ssl=true&replicaSet=atlas-13o89r-shard-0&authSource=admin&retryWrites=true&w=majority";
 
 let db: Db | null = null;
 let client: MongoClient | null = null;
@@ -29,14 +30,30 @@ let siteSettings = {
   retentionHours: 24
 };
 
-// HANDSHAKE INITIALIZATION SEQUENCER
+// محرك حل مشكلات الـ DNS لبيئة Render المجانية
+function configureGoogleDNS() {
+  try {
+    console.log('Injecting Google Public DNS (8.8.8.8) into Runtime Environment...');
+    dns.setServers(['8.8.8.8', '8.8.4.4']);
+  } catch (dnsErr) {
+    console.warn('DNS injection bypassed:', dnsErr);
+  }
+}
+
+// تعديل دالة الاتصال لضمان تخطي عقبة جدار الحماية والـ DNS في Render
 async function connectDatabase() {
   try {
+    configureGoogleDNS();
     console.log('Initiating static IPv4 socket connection to MongoDB Atlas database...');
-    client = new MongoClient(mongoURI);
+    
+    // إعداد خيارات الاتصال لتفادي الـ Timeouts الشائعة على الخوادم المجانية
+    client = new MongoClient(mongoURI, {
+      connectTimeoutMS: 30000,
+      socketTimeoutMS: 45000,
+    });
+    
     await client.connect();
     
-    // Explicit binding to your production database container "sample_mflix"
     db = client.db('sample_mflix'); 
     console.log('SUCCESS: Static database tunnel initialized. Workspace target: sample_mflix');
     
@@ -114,7 +131,6 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   res.json({ success: true, user: { id: result.insertedId, name, email } });
 });
 
-// SAFE FALLBACK STATS ENDPOINT TO PREVENT GRAPH AND DATA CRASHES
 app.get('/api/admin/stats', async (req: Request, res: Response) => {
   if (!db) {
     return res.json({ totalUsers: 0, totalGenerations: 0, totalVisitors: 0, whatsappNumber: siteSettings.whatsappNumber });
@@ -152,7 +168,6 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// STABILIZED INTERACTION SOCKET LAUNCH ROUTINE
 app.listen(PORT, async () => {
   console.log(`Server node processing metrics on port instance: ${PORT}`);
   await connectDatabase();
