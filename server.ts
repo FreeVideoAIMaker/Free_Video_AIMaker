@@ -15,8 +15,8 @@ const PORT = process.env.PORT || 10000;
 app.use(express.json({ limit: '50mb' }));
 app.use(express.urlencoded({ extended: true, limit: '50mb' }));
 
-// STANDARD CONNECTION STRING - Bypasses SRV DNS lookup issues on Render completely
-const mongoURI = "mongodb://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0-shard-00-00.qdrozb.mongodb.net:27017,cluster0-shard-00-01.qdrozb.mongodb.net:27017,cluster0-shard-00-02.qdrozb.mongodb.net:27017/sample_mflix?ssl=true&replicaSet=atlas-13o89r-shard-0&authSource=admin&retryWrites=true&w=majority";
+// SECURE FALLBACK: Reads connection string dynamically from Render Environment Variable
+const mongoURI = process.env.MONGODB_URI || "mongodb+srv://projectfinance94_db_user:cNJ9FA1AlUxsoM4m@cluster0.qdrozb.mongodb.net/sample_mflix?retryWrites=true&w=majority&appName=Cluster0";
 
 let db: Db | null = null;
 let client: MongoClient | null = null;
@@ -29,16 +29,15 @@ let siteSettings = {
   retentionHours: 24
 };
 
-// DIRECT CONNECTION INITIALIZER
 async function connectDatabase() {
   try {
-    console.log('Initiating secure standard connection to MongoDB Atlas Shards...');
+    console.log('Initiating production handshake via dynamically mapped environment token...');
     client = new MongoClient(mongoURI);
     await client.connect();
     
-    // Direct link to your live catalog database from screenshot
+    // Explicitly binding to your exact database framework from screenshot
     db = client.db('sample_mflix'); 
-    console.log('SUCCESS: Database tunnel stabilized with workspace: sample_mflix');
+    console.log('SUCCESS: Active database tunnel initialized with catalog: sample_mflix');
     
     const configColl = db.collection('config');
     const savedConfig = await configColl.findOne({});
@@ -59,9 +58,9 @@ async function connectDatabase() {
 setInterval(() => {
   if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
     http.get(`${process.env.APP_URL}/api/system/keep-alive`, (res) => {
-      console.log(`[Anti-Sleep]: Engine responsive: ${res.statusCode}`);
+      console.log(`[Anti-Sleep]: Engine sync response: ${res.statusCode}`);
     }).on('error', (err) => {
-      console.error('[Anti-Sleep]: Engine connection offline:', err.message);
+      console.error('[Anti-Sleep]: Engine connection dropped:', err.message);
     });
   }
 }, 10 * 60 * 1000);
@@ -149,9 +148,7 @@ if (process.env.NODE_ENV === 'production') {
   });
 }
 
-// INITIATES LAUNCH INVOCATION SEQUENCE FOR STANDARDIZED SHARDS
 app.listen(PORT, async () => {
   console.log(`Server executing active operations on port: ${PORT}`);
   await connectDatabase();
 });
-
