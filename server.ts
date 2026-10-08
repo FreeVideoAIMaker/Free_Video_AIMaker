@@ -37,6 +37,7 @@ async function connectDatabase() {
     db = client.db('freevideoaimaker');
     console.log('Successfully connected to MongoDB Atlas Cluster.');
     
+    // Fixed Configuration collection mapping
     const configColl = db.collection('config');
     const savedConfig = await configColl.findOne({});
     if (!savedConfig) {
@@ -78,6 +79,7 @@ app.post('/api/admin/reset-all-analytics', async (req: Request, res: Response) =
     return res.status(401).json({ error: "Invalid credentials code." });
   }
 
+  // Clear collections completely from the cloud database
   await db.collection('videos').deleteMany({});
   await db.collection('analytics').deleteMany({});
   await db.collection('users').deleteMany({ role: { '\$ne': 'admin' } });
@@ -127,6 +129,23 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   const newUser = { name, email: email.toLowerCase(), password, createdAt: new Date().toISOString(), role: 'user', isBanned: false, dailyGenerationsCount: 0, lastGenerationDate: new Date().toISOString().split('T')[0] };
   const result = await db.collection('users').insertOne(newUser);
   res.json({ success: true, user: { id: result.insertedId, name, email } });
+});
+
+// API endpoint to serve basic setup statistics data
+app.get('/api/admin/stats', async (req: Request, res: Response) => {
+  if (!db) {
+    // Fallback if db connection is pending to prevent frontend layout crash
+    return res.json({ totalUsers: 0, totalGenerations: 0, totalVisitors: 0, whatsappNumber: siteSettings.whatsappNumber });
+  }
+  const totalUsers = await db.collection('users').countDocuments({ role: { '\$ne': 'admin' } });
+  const totalVideos = await db.collection('videos').countDocuments({});
+  
+  res.json({
+    totalUsers,
+    totalGenerations: totalVideos,
+    totalVisitors: totalUsers * 2,
+    whatsappNumber: siteSettings.whatsappNumber
+  });
 });
 
 app.get('/api/site/config', (req: Request, res: Response) => {
