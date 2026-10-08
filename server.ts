@@ -35,9 +35,8 @@ async function connectDatabase() {
     client = new MongoClient(mongoURI);
     await client.connect();
     db = client.db('freevideoaimaker');
-    console.log('Successfully stabilized pipeline connection with MongoDB Atlas Cluster.');
+    console.log('Successfully connected to MongoDB Atlas Cluster.');
     
-    // Config setup block
     const configColl = db.collection('config');
     const savedConfig = await configColl.findOne({});
     if (!savedConfig) {
@@ -46,29 +45,26 @@ async function connectDatabase() {
       siteSettings = { ...siteSettings, ...savedConfig as any };
     }
   } catch (err: any) {
-    console.error('Critical database tracking gateway offline:', err.message);
+    console.error('Database connection failed:', err.message);
   }
 }
 
 // ----------------------------------------------------
-// INTERNAL SELF-PING SYSTEM (KEEPS SERVICE AWAKE EVERY 10 MINUTES)
+// INTERNAL SELF-PING SYSTEM (EVERY 10 MINUTES)
 // ----------------------------------------------------
-const appURL = process.env.APP_URL || `http://localhost:${PORT}`;
-
 setInterval(() => {
   if (process.env.NODE_ENV === 'production' && process.env.APP_URL) {
-    console.log('[System-Trigger]: Dispatching native anti-sleep ping node...');
+    console.log('[System-Trigger]: Dispatching anti-sleep ping node...');
     http.get(`${process.env.APP_URL}/api/system/keep-alive`, (res) => {
-      console.log(`[System-Trigger]: Awake ping responded with status: ${res.statusCode}`);
+      console.log(`[System-Trigger]: Ping responded with status: ${res.statusCode}`);
     }).on('error', (err) => {
-      console.error('[System-Trigger]: Awake ping layout bypassed:', err.message);
+      console.error('[System-Trigger]: Ping error:', err.message);
     });
   }
-}, 10 * 60 * 1000); // 10 Minutes precise sync checkpoint
+}, 10 * 60 * 1000);
 
-// Isolated pathway strictly ignored by visitor counters analytics
 app.get('/api/system/keep-alive', (req: Request, res: Response) => {
-  res.json({ status: "alive", authenticatedBots: "filtered_out", tracked: false });
+  res.json({ status: "alive", tracked: false });
 });
 
 // ----------------------------------------------------
@@ -79,18 +75,17 @@ app.post('/api/admin/reset-all-analytics', async (req: Request, res: Response) =
   const { masterPassword } = req.body;
 
   if (masterPassword !== siteSettings.adminPassword) {
-    return res.status(401).json({ error: "Invalid configuration credentials code." });
+    return res.status(401).json({ error: "Invalid credentials code." });
   }
 
-  // Absolute hard wipe - flushes records from global cluster database completely
   await db.collection('videos').deleteMany({});
   await db.collection('analytics').deleteMany({});
-  await db.collection('users').deleteMany({ role: { \$ne: 'admin' } }); // Flushes fake registered tokens completely
+  await db.collection('users').deleteMany({ role: { \$ne: 'admin' } });
   
-  res.json({ success: true, message: "Cloud schema statistics reset completely." });
+  res.json({ success: true, message: "Cloud statistics reset completely." });
 });
 
-// DYNAMIC CONTROL LOGIC FOR UPDATING PASSWORD AND WHATSAPP METRIC FROM ADMIN PORTAL
+// DYNAMIC CONTROL LOGIC FOR UPDATING PASSWORD AND WHATSAPP
 app.post('/api/admin/update-settings', async (req: Request, res: Response) => {
   if (!db) return res.status(500).json({ error: "Database offline" });
   const { newPassword, whatsappNumber, dailyLimit } = req.body;
@@ -108,6 +103,8 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
   const { email, password } = req.body;
   const user = await db.collection('users').findOne({ email: email.toLowerCase(), password });
   if (!user) return res.status(401).json({ error: 'Invalid login matrix.' });
+  
+  await db.collection('users').updateOne({ _id: user._id }, { \$set: { lastLoginAt: new Date().toISOString() } });
   res.json({ success: true, user });
 });
 
@@ -115,8 +112,9 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
   if (!db) return res.status(500).json({ error: "Database offline" });
   const { name, email, password } = req.body;
   const existing = await db.collection('users').findOne({ email: email.toLowerCase() });
-  if (existing) return res.status(400).json({ error: 'Account identity already operational.' });
-  const newUser = { name, email: email.toLowerCase(), password, createdAt: new Date().toISOString(), role: 'user', isBanned: false };
+  if (existing) return res.status(400).json({ error: 'Account already operational.' });
+  
+  const newUser = { name, email: email.toLowerCase(), password, createdAt: new Date().toISOString(), role: 'user', isBanned: false, dailyGenerationsCount: 0, lastGenerationDate: new Date().toISOString().split('T')[0] };
   const result = await db.collection('users').insertOne(newUser);
   res.json({ success: true, user: { id: result.insertedId, name, email } });
 });
@@ -137,5 +135,5 @@ if (process.env.NODE_ENV === 'production') {
 }
 
 connectDatabase().then(() => {
-  app.listen(PORT, () => { console.log(`Active server operating on network node: ${PORT}`); });
+  app.listen(PORT, () => { console.log(`Active server operating on port: ${PORT}`); });
 });
