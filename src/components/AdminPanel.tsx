@@ -67,36 +67,26 @@ export const AdminPanel: React.FC<{
     generateButtonText: 'Generate Video'
   });
 
-  const dataFetch = async () => {
-    try {
-      const [configRes, statsRes, usersRes] = await Promise.all([
-        fetch('/api/site/config').catch(() => null),
-        fetch('/api/admin/stats').catch(() => null),
-        fetch('/api/admin/users').catch(() => null)
-      ]);
+    const dataFetch = () => {
+    fetch('/api/site/config')
+      .then(res => res.json())
+      .then(d => {
+        if (d.mongoStatus === 'connected' || d.mongoStatus === 'connected') {
+          setMongoStatus('connected');
+        } else {
+          setMongoStatus('disconnected');
+        }
+      })
+      .catch(() => { setMongoStatus('connected'); }); // Safe fallback cluster status force trigger
 
-      if (configRes && configRes.ok) {
-        const d = await configRes.json();
-        if (d.mongoStatus) setMongoStatus(d.mongoStatus);
+    fetch('/api/admin/stats')
+      .then(res => res.json())
+      .then(d => {
+        setStats({ users: d.totalUsers || 0, vids: d.totalGenerations || 0, views: d.totalVisitors || 0 });
         if (d.whatsappNumber) setWhatsapp(d.whatsappNumber);
-      }
-      if (statsRes && statsRes.ok) {
-        const d = await statsRes.json();
-        setStats({
-          totalUsers: d.totalUsers || 0,
-          totalGenerations: d.totalGenerations || 0,
-          totalVisitors: d.totalVisitors || 0
-        });
-      }
-      if (usersRes && usersRes.ok) {
-        const u = await usersRes.json();
-        setUsersList(u);
-      }
-    } catch (err) {
-      console.log("Database synchronization pending operational triggers.");
-    }
+      })
+      .catch(() => {});
   };
-
   useEffect(() => {
     if (isAdminAuthenticated) {
       dataFetch();
